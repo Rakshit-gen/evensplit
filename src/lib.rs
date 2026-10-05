@@ -2,9 +2,11 @@
 //! payments that make everyone even.
 
 pub mod money;
+pub mod report;
 pub mod settle;
 pub mod trip;
 
+pub use report::Report;
 pub use trip::{Balance, Expense, Payment, Split, Trip};
 
 /// Everything that can be wrong with a trip, worded for the person who has
