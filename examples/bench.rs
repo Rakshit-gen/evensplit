@@ -36,9 +36,9 @@ fn trip(rng: &mut Rng, people: usize, expenses: usize, round: bool) -> Trip {
         // Round amounts make zero-sum groups more likely, which is where a
         // greedy settle-up can miss the minimum.
         let paise = if round {
-            100_00 * (1 + rng.below(20))
+            10_000 * (1 + rng.below(20))
         } else {
-            50_00 + rng.below(5_000_00)
+            5_000 + rng.below(500_000)
         };
         let split = match rng.below(20) {
             0..12 => Split::Equal(vec![]),

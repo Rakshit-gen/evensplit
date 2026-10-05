@@ -25,10 +25,7 @@ pub fn settle(nets: &[i64]) -> Vec<Transfer> {
     let mut out = Vec::new();
     // A linear scan per payment, so O(n^2) overall. Fine for any group that
     // shares a bill; a heap would be the next step for thousands of people.
-    loop {
-        let Some(d) = pick(&left, |v| -v) else {
-            break;
-        };
+    while let Some(d) = pick(&left, |v| -v) {
         // Someone owed exactly what the debtor owes clears two people with
         // one payment, which the largest creditor might not.
         let exact = left.iter().position(|&v| v == -left[d]);

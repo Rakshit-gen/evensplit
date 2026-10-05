@@ -2,6 +2,9 @@
 name = "evensplit"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
+default-run = "evensplit"
+description = "Settle up shared costs for a trip, a flat or a dinner with the fewest payments"
 
 [dependencies]
 anyhow = "1"

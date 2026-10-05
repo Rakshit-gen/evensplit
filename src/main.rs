@@ -68,12 +68,11 @@ fn table(r: &Report, expenses: usize) -> String {
     let settled = r.balances.iter().any(|b| b.settled != 0);
     let head = if settled { "settled" } else { "" };
     let set_w = if settled { amt_w.max(7) } else { 0 };
-    out += &format!(
-        "{:name_w$}  {:>amt_w$}  {:>amt_w$}  {head:>set_w$}\n",
+    let header = format!(
+        "{:name_w$}  {:>amt_w$}  {:>amt_w$}  {head:>set_w$}",
         "", "paid", "share"
-    )
-    .trim_end()
-    .to_string();
+    );
+    out += header.trim_end();
     out += "\n";
     for b in &r.balances {
         let stands = match b.net {
