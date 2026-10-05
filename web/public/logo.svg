@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>evensplit</title>
+  <!-- A bill torn down the middle into two equal halves. -->
+  <path d="M4 3h10.5v23l-1.75 2-1.75-2-1.75 2-1.75-2-1.75 2L4 26Z" fill="#1c2620"/>
+  <path d="M17.5 3H28v23l-1.75 2-1.75-2-1.75 2-1.75-2-1.75 2-1.75-2Z" fill="#1c2620"/>
+  <path d="M7 9h5M7 13h5M7 17h3M20.5 9h5M20.5 13h5M20.5 17h3" stroke="#f4f7f0" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

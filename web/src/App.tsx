@@ -90,6 +90,7 @@ export default function App() {
   return (
     <main className="page">
       <header className="top">
+        <img className="logo" src="/logo.svg" alt="" width="32" height="32" />
         <h1>{trip.name || "Untitled trip"}</h1>
         <span className="currency">{trip.currency}</span>
       </header>
