@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getTrip, putTrip, type Expense, type Trip, type View } from "./api";
 import ExpenseForm from "./ExpenseForm";
-import { blankExpense } from "./ledger";
+import Entries from "./Entries";
+import { blankExpense, removeExpense, removePayment, restore, type Removed } from "./ledger";
 import People from "./People";
 
 export default function App() {
@@ -11,6 +12,8 @@ export default function App() {
   // receipts tend to come in runs from the same person.
   const [last, setLast] = useState<{ payer: string | null; currency?: string }>({ payer: null });
   const [added, setAdded] = useState(0);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [removed, setRemoved] = useState<Removed | null>(null);
 
   useEffect(() => {
     getTrip().then(setView, (e: Error) => setError(e.message));
@@ -29,6 +32,21 @@ export default function App() {
     }
   }, []);
 
+  // Ctrl+Z or Cmd+Z brings back the last deletion, unless the cursor is in
+  // a text box where it should undo typing instead.
+  const undoRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey && !t.closest("input, select, textarea")) {
+        e.preventDefault();
+        undoRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   if (!view) {
     return <main className="page">{error ? <p className="error">{error}</p> : <p className="muted">Opening the trip…</p>}</main>;
   }
@@ -41,6 +59,26 @@ export default function App() {
     setAdded((n) => n + 1);
     return true;
   };
+
+  const update = async (e: Expense) => {
+    if (editing === null) return false;
+    const expenses = trip.expenses.map((old, i) => (i === editing ? e : old));
+    if (!(await save({ ...trip, expenses }))) return false;
+    setEditing(null);
+    return true;
+  };
+
+  const remove = async ([next, gone]: [Trip, Removed]) => {
+    if (await save(next)) {
+      setRemoved(gone);
+      setEditing(null);
+    }
+  };
+
+  const undo = async () => {
+    if (removed && (await save(restore(trip, removed)))) setRemoved(null);
+  };
+  undoRef.current = undo;
 
   return (
     <main className="page">
@@ -70,6 +108,40 @@ export default function App() {
           onCancel={() => {}}
         />
       </section>
+      <section aria-labelledby="ledger-h">
+        <h2 id="ledger-h">Expenses</h2>
+        <Entries
+          trip={trip}
+          editing={editing}
+          form={
+            editing !== null && (
+              <ExpenseForm
+                key={`edit-${editing}`}
+                trip={trip}
+                start={trip.expenses[editing]!}
+                editing
+                focus
+                onSubmit={update}
+                onCancel={() => setEditing(null)}
+              />
+            )
+          }
+          onEdit={setEditing}
+          onDelete={(i) => remove(removeExpense(trip, i))}
+          onDeletePayment={(i) => remove(removePayment(trip, i))}
+        />
+      </section>
+      {removed && (
+        <div className="undo" role="status">
+          <span>
+            Deleted {removed.kind === "expense" ? `"${removed.item.what || "Untitled expense"}"` : `payment from ${removed.item.from} to ${removed.item.to}`}.
+          </span>
+          <button onClick={undo}>Undo</button>
+          <button className="quiet" onClick={() => setRemoved(null)} aria-label="Dismiss">
+            Dismiss
+          </button>
+        </div>
+      )}
     </main>
   );
 }
