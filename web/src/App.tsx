@@ -6,6 +6,7 @@ import { blankExpense, markPaid, removeExpense, removePayment, restore, type Rem
 import People from "./People";
 import Settings from "./Settings";
 import Settle from "./Settle";
+import Summary from "./Summary";
 
 export default function App() {
   const [view, setView] = useState<View | null>(null);
@@ -145,6 +146,7 @@ export default function App() {
           {view.report && (
             <Settle report={view.report} onPaid={(o) => save(markPaid(trip, o, view.report!.decimals))} />
           )}
+          {view.summary && <Summary text={view.summary} />}
         </aside>
       </div>
       {removed && (

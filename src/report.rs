@@ -59,10 +59,13 @@ impl Report {
         }
         let noun = if expenses == 1 { "expense" } else { "expenses" };
         out += &format!(
-            "{expenses} {noun}, {} {} in all.\n\n",
+            "{expenses} {noun}, {} {} in all.\n",
             m(self.total),
             self.currency
         );
+        if !self.balances.is_empty() {
+            out += "\n";
+        }
         for b in &self.balances {
             out += &match b.net {
                 0 => format!("{} is even\n", b.name),
@@ -106,11 +109,17 @@ mod tests {
              To settle up:\nBen pays Asha 1,240.50\nChitra pays Asha 1,240.50\n"
         );
         t.expenses.clear();
-        assert!(
-            Report::new(&t)
-                .unwrap()
-                .text(0)
-                .ends_with("Everyone is even.\n")
+        assert!(Report::new(&t).unwrap().text(0).ends_with(
+            "in all.\n\nAsha is even\nBen is even\nChitra is even\n\nEveryone is even.\n"
+        ));
+    }
+
+    #[test]
+    fn summary_of_an_empty_trip_has_no_stray_lines() {
+        let t = Trip::new("", "EUR");
+        assert_eq!(
+            Report::new(&t).unwrap().text(0),
+            "0 expenses, 0.00 EUR in all.\n\nEveryone is even.\n"
         );
     }
 }
