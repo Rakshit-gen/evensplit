@@ -91,6 +91,7 @@ export default function App() {
     <main className="page">
       <header className="top">
         <h1>{trip.name || "Untitled trip"}</h1>
+        <span className="currency">{trip.currency}</span>
       </header>
       {error && (
         <p className="error" role="alert">

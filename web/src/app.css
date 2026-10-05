@@ -1,0 +1,560 @@
+/* A green columnar ledger pad: ruled lines, names on the left, money in a
+   right-hand column, debts in red ink. See DESIGN.md. */
+:root {
+  --paper: #f4f7f0;
+  --sheet: #fbfcf8;
+  --rule: #c5d6bf;
+  --rule-strong: #8fae86;
+  --ink: #1c2620;
+  --muted: #4f5f53;
+  --owes: #a1241b;
+  --gets: #1d5e33;
+  --focus: #1f57c3;
+  --radius: 3px;
+  --quick: 120ms;
+  --font: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition: none !important;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.5 var(--font);
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+h1,
+h2 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+/* Section headings sit on a ruled line, like column heads on the pad. */
+h2 {
+  font-size: 1rem;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: 12px;
+}
+
+p {
+  margin: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+.error {
+  color: var(--owes);
+}
+
+.warn {
+  color: var(--owes);
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Every amount, wherever it appears, lines up digit under digit. */
+.money,
+.num,
+input[inputmode="decimal"],
+input[inputmode="numeric"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 96px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 3px double var(--rule-strong);
+  margin-bottom: 16px;
+}
+
+.top .logo {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+
+.top .currency {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+section {
+  margin-bottom: 40px;
+}
+
+/* Controls */
+
+button {
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition:
+    background var(--quick),
+    border-color var(--quick);
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+button.primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: #33443a;
+}
+
+button.quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button.quiet:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--ink);
+}
+
+input,
+select {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  min-width: 0;
+  width: 100%;
+  transition: border-color var(--quick);
+}
+
+input:hover,
+select:hover {
+  border-color: var(--rule-strong);
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--owes);
+}
+
+input:disabled {
+  color: var(--muted);
+  background: transparent;
+}
+
+label > span {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.row .grow {
+  flex: 1 1 200px;
+}
+
+.row .amount {
+  flex: 0 1 140px;
+}
+
+.row .amount input {
+  text-align: right;
+}
+
+.row .code {
+  flex: 0 0 96px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* People */
+
+.people h2 {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.people {
+  margin-bottom: 16px;
+}
+
+.names {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.names .name {
+  font-weight: 600;
+}
+
+.names form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.names input {
+  width: 11em;
+}
+
+/* Trip settings */
+
+.settings {
+  margin-bottom: 24px;
+}
+
+.settings summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.875rem;
+  width: fit-content;
+}
+
+.settings form {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+}
+
+.settings .rate {
+  margin-top: 8px;
+}
+
+.settings p {
+  margin-top: 12px;
+}
+
+/* Two columns: writing on the left, what follows from it on the right. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 40px;
+}
+
+@media (max-width: 860px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+/* Expense form */
+
+.expense-form .modes {
+  border: 0;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.modes legend {
+  font-size: 0.875rem;
+  color: var(--muted);
+  padding: 0;
+  margin-bottom: 2px;
+}
+
+.modes label,
+.tick {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.modes input,
+.tick input {
+  width: auto;
+  accent-color: var(--ink);
+}
+
+.who {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.parts label {
+  flex: 0 1 120px;
+}
+
+.parts input {
+  text-align: right;
+}
+
+.parts p {
+  flex-basis: 100%;
+}
+
+/* The ledger: one ruled line per entry, money in the right-hand column. */
+
+.ledger {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ledger li {
+  display: flex;
+  align-items: start;
+  border-bottom: 1px solid var(--rule);
+}
+
+.ledger li.editing {
+  display: block;
+  padding: 12px;
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+}
+
+.entry {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 8px 0;
+}
+
+button.entry:hover {
+  background: var(--sheet);
+}
+
+.entry .what {
+  grid-column: 1;
+}
+
+.entry .meta {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.entry .money {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: right;
+}
+
+.entry .cur {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.ledger .delete {
+  padding: 8px 4px 8px 12px;
+  font-size: 0.875rem;
+}
+
+.ledger .payment .what,
+.ledger .payment .money {
+  color: var(--muted);
+}
+
+/* Settle up */
+
+.payments {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.payments li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.payments b {
+  font-weight: 600;
+}
+
+.payments .money {
+  font-weight: 600;
+}
+
+.payments button {
+  font-size: 0.875rem;
+  padding: 4px 10px;
+}
+
+.balances {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.balances th,
+.balances td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  font-weight: 400;
+}
+
+.balances thead th {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.balances tbody th {
+  font-weight: 600;
+}
+
+.balances .num {
+  text-align: right;
+  padding-left: 12px;
+}
+
+.balances tbody tr:last-child td,
+.balances tbody tr:last-child th {
+  border-bottom: 3px double var(--rule-strong);
+}
+
+.owes {
+  color: var(--owes);
+}
+
+.gets {
+  color: var(--gets);
+}
+
+/* The summary, as it will look in the chat. */
+.slip {
+  font: inherit;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+}
+
+/* Undo bar, pinned to the bottom so it is in reach on a phone. */
+.undo {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 8px 8px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius);
+}
+
+.undo button {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--paper);
+}
+
+.undo button.quiet {
+  background: none;
+  color: var(--paper);
+}
+
+.undo button.quiet:hover {
+  color: var(--paper);
+}
