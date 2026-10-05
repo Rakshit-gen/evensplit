@@ -106,6 +106,37 @@ impl Rate {
     }
 }
 
+/// Split `total` in proportion to `weights` so the parts add up to exactly
+/// `total`. Everyone first gets the rounded-down share; the units left over
+/// go one each to the largest fractions. Ties are broken starting from
+/// position `start` and wrapping round, so callers can rotate who picks up
+/// the odd paisa instead of it always landing on the same person.
+pub fn allocate(total: i64, weights: &[u64], start: usize) -> Vec<i64> {
+    let sum: u128 = weights.iter().map(|&w| w as u128).sum();
+    if sum == 0 {
+        return vec![0; weights.len()];
+    }
+    let mag = total.unsigned_abs() as u128;
+    let mut parts: Vec<i64> = Vec::with_capacity(weights.len());
+    let mut rems: Vec<(u128, usize)> = Vec::with_capacity(weights.len());
+    for (i, &w) in weights.iter().enumerate() {
+        let exact = mag * w as u128;
+        parts.push((exact / sum) as i64);
+        rems.push((exact % sum, i));
+    }
+    let n = weights.len();
+    let left = mag as i64 - parts.iter().sum::<i64>();
+    // Largest remainder first; among equals, nearest to `start` first.
+    rems.sort_by_key(|&(r, i)| (std::cmp::Reverse(r), (i + n - start % n) % n));
+    for &(_, i) in rems.iter().take(left as usize) {
+        parts[i] += 1;
+    }
+    if total < 0 {
+        parts.iter_mut().for_each(|p| *p = -*p);
+    }
+    parts
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -169,6 +200,46 @@ mod tests {
     fn rejects_rates_that_are_not_positive_numbers() {
         for bad in ["", "0", "0.000", "-1", "abc", "1,5", "."] {
             assert!(Rate::parse(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn allocation_hands_out_the_leftover_and_never_loses_a_unit() {
+        assert_eq!(allocate(100, &[1, 1, 1], 0), vec![34, 33, 33]);
+        assert_eq!(allocate(100, &[1, 1, 1], 1), vec![33, 34, 33]);
+        assert_eq!(allocate(100, &[1, 1, 1], 5), vec![33, 33, 34]);
+        assert_eq!(allocate(-100, &[1, 1, 1], 0), vec![-34, -33, -33]);
+        assert_eq!(allocate(1000, &[2, 1, 1], 0), vec![500, 250, 250]);
+        // The biggest fraction wins the leftover, whatever the rotation.
+        assert_eq!(allocate(10, &[1, 2], 0), vec![3, 7]);
+        assert_eq!(allocate(1, &[1, 1, 1, 1], 2), vec![0, 0, 1, 0]);
+        assert_eq!(allocate(0, &[1, 1], 0), vec![0, 0]);
+        assert_eq!(allocate(50, &[0, 0], 0), vec![0, 0]);
+    }
+
+    #[test]
+    fn allocation_always_adds_back_up() {
+        // A small deterministic generator so the test needs no crates.
+        let mut x: u64 = 0x9e3779b97f4a7c15;
+        let mut next = || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x
+        };
+        for _ in 0..20_000 {
+            let n = 1 + (next() % 9) as usize;
+            let weights: Vec<u64> = (0..n).map(|_| 1 + next() % 7).collect();
+            let total = (next() % 2_000_000) as i64 - 1_000_000;
+            let start = (next() % 10) as usize;
+            let parts = allocate(total, &weights, start);
+            assert_eq!(parts.iter().sum::<i64>(), total);
+            let sum: u64 = weights.iter().sum();
+            for (p, w) in parts.iter().zip(&weights) {
+                // Nobody is off their fair share by a whole unit or more.
+                let fair = total as f64 * *w as f64 / sum as f64;
+                assert!((*p as f64 - fair).abs() < 1.0, "{p} vs {fair}");
+            }
         }
     }
 }
