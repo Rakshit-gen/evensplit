@@ -4,6 +4,7 @@ import ExpenseForm from "./ExpenseForm";
 import Entries from "./Entries";
 import { blankExpense, markPaid, removeExpense, removePayment, restore, type Removed } from "./ledger";
 import People from "./People";
+import Settings from "./Settings";
 import Settle from "./Settle";
 
 export default function App() {
@@ -101,6 +102,7 @@ export default function App() {
         </p>
       )}
       <People trip={trip} save={save} />
+      <Settings trip={trip} save={save} />
       <div className="columns">
         <div className="main">
           <section aria-labelledby="add-h">
