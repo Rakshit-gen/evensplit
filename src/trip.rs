@@ -3,6 +3,8 @@
 //! readable and editable by hand; they are parsed into minor units on use.
 
 use std::collections::BTreeMap;
+use std::io::Write;
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
@@ -89,6 +91,35 @@ impl Trip {
             expenses: Vec::new(),
             payments: Vec::new(),
         }
+    }
+
+    /// Read a trip file.
+    pub fn load(path: &Path) -> std::io::Result<Trip> {
+        let text = std::fs::read_to_string(path)?;
+        serde_json::from_str(&text)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    }
+
+    /// Write the trip as indented JSON next to `path`, flush it to disk, then
+    /// rename it over `path`. A crash or a full disk part way through leaves
+    /// the old file whole instead of half a new one.
+    pub fn save(&self, path: &Path) -> std::io::Result<()> {
+        let dir = match path.parent() {
+            Some(d) if !d.as_os_str().is_empty() => d,
+            _ => Path::new("."),
+        };
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy())
+            .unwrap_or_default();
+        let tmp = dir.join(format!(".{name}.saving"));
+        let mut text = serde_json::to_string_pretty(self)?;
+        text.push('\n');
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(text.as_bytes())?;
+        f.sync_all()?;
+        drop(f);
+        std::fs::rename(&tmp, path)
     }
 
     fn person(&self, name: &str, context: &str) -> Result<usize, Error> {
@@ -482,5 +513,24 @@ mod tests {
                 b.iter().map(|b| b.share).sum::<i64>()
             );
         }
+    }
+
+    #[test]
+    fn saves_and_loads_without_leaving_a_temp_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trip.json");
+        let mut t = trip();
+        add(&mut t, "Asha", "12.50", None, Split::Equal(vec![]));
+        t.save(&path).unwrap();
+        t.expenses[0].amount = "13".into();
+        t.save(&path).unwrap();
+        assert_eq!(Trip::load(&path).unwrap(), t);
+        let names: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names, vec!["trip.json"]);
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("\n  \"people\": [\n"), "{text}");
     }
 }
