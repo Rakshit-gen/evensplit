@@ -25,9 +25,19 @@ function splitText(e: Expense, people: string[]): string {
     return `split by ${splitAmong(s, people).join(", ")}`;
   }
   if ("shares" in s) {
-    return "by shares: " + Object.entries(s.shares).map(([p, n]) => `${p} ${n}`).join(", ");
+    return (
+      "by shares: " +
+      Object.entries(s.shares)
+        .map(([p, n]) => `${p} ${n}`)
+        .join(", ")
+    );
   }
-  return "exact: " + Object.entries(s.exact).map(([p, a]) => `${p} ${a}`).join(", ");
+  return (
+    "exact: " +
+    Object.entries(s.exact)
+      .map(([p, a]) => `${p} ${a}`)
+      .join(", ")
+  );
 }
 
 /** Every expense and payment so far, newest at the bottom like a ledger. */
@@ -54,7 +64,11 @@ export default function Entries({ trip, editing, form, onEdit, onDelete, onDelet
                 {e.currency && e.currency !== trip.currency && <span className="cur"> {e.currency}</span>}
               </span>
             </button>
-            <button className="quiet delete" onClick={() => onDelete(i)} aria-label={`Delete ${e.what || "this expense"}`}>
+            <button
+              className="quiet delete"
+              onClick={() => onDelete(i)}
+              aria-label={`Delete ${e.what || "this expense"}`}
+            >
               Delete
             </button>
           </li>
@@ -69,7 +83,11 @@ export default function Entries({ trip, editing, form, onEdit, onDelete, onDelet
             <span className="meta">settling up</span>
             <span className="money">{shown(p.amount, trip.currency)}</span>
           </div>
-          <button className="quiet delete" onClick={() => onDeletePayment(i)} aria-label={`Delete payment from ${p.from} to ${p.to}`}>
+          <button
+            className="quiet delete"
+            onClick={() => onDeletePayment(i)}
+            aria-label={`Delete payment from ${p.from} to ${p.to}`}
+          >
             Delete
           </button>
         </li>

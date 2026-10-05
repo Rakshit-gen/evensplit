@@ -1,9 +1,6 @@
 // Calls to evensplit-web. Shapes mirror src/trip.rs and src/report.rs.
 
-export type Split =
-  | { equal: string[] }
-  | { shares: Record<string, number> }
-  | { exact: Record<string, string> };
+export type Split = { equal: string[] } | { shares: Record<string, number> } | { exact: Record<string, string> };
 
 export interface Expense {
   what: string;

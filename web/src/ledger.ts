@@ -110,8 +110,7 @@ export function markPaid(trip: Trip, owed: Owed, places: number): Trip {
 /** Rename someone everywhere they appear, so their history follows them. */
 export function renamePerson(trip: Trip, from: string, to: string): Trip {
   const n = (p: string) => (p === from ? to : p);
-  const keys = <T,>(o: Record<string, T>) =>
-    Object.fromEntries(Object.entries(o).map(([k, v]) => [n(k), v]));
+  const keys = <T>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [n(k), v]));
   const split = (s: Split): Split =>
     "equal" in s ? { equal: s.equal.map(n) } : "shares" in s ? { shares: keys(s.shares) } : { exact: keys(s.exact) };
   return {

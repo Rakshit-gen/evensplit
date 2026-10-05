@@ -41,7 +41,9 @@ export default function ExpenseForm({ trip, start, editing, focus, onSubmit, onC
   const [mode, setMode] = useState<Mode>(modeOf(start.split));
   const [some, setSome] = useState<string[]>("equal" in start.split ? start.split.equal : []);
   const [shares, setShares] = useState<Record<string, string>>(
-    "shares" in start.split ? Object.fromEntries(Object.entries(start.split.shares).map(([k, v]) => [k, String(v)])) : {},
+    "shares" in start.split
+      ? Object.fromEntries(Object.entries(start.split.shares).map(([k, v]) => [k, String(v)]))
+      : {},
   );
   const [exact, setExact] = useState<Record<string, string>>("exact" in start.split ? start.split.exact : {});
   const [problem, setProblem] = useState<string | null>(null);

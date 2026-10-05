@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getTrip, putTrip, type Expense, type Trip, type View } from "./api";
 import ExpenseForm from "./ExpenseForm";
 import Entries from "./Entries";
-import { blankExpense, removeExpense, removePayment, restore, type Removed } from "./ledger";
+import { blankExpense, markPaid, removeExpense, removePayment, restore, type Removed } from "./ledger";
 import People from "./People";
+import Settle from "./Settle";
 
 export default function App() {
   const [view, setView] = useState<View | null>(null);
@@ -48,7 +49,11 @@ export default function App() {
   }, []);
 
   if (!view) {
-    return <main className="page">{error ? <p className="error">{error}</p> : <p className="muted">Opening the trip…</p>}</main>;
+    return (
+      <main className="page">
+        {error ? <p className="error">{error}</p> : <p className="muted">Opening the trip…</p>}
+      </main>
+    );
   }
   const { trip } = view;
   const blank = { ...blankExpense(trip, last.payer), currency: last.currency };
@@ -96,45 +101,58 @@ export default function App() {
         </p>
       )}
       <People trip={trip} save={save} />
-      <section aria-labelledby="add-h">
-        <h2 id="add-h">Add an expense</h2>
-        <ExpenseForm
-          key={`new-${added}-${trip.people.join()}`}
-          trip={trip}
-          start={blank}
-          editing={false}
-          focus={added > 0 || trip.people.length >= 2}
-          onSubmit={add}
-          onCancel={() => {}}
-        />
-      </section>
-      <section aria-labelledby="ledger-h">
-        <h2 id="ledger-h">Expenses</h2>
-        <Entries
-          trip={trip}
-          editing={editing}
-          form={
-            editing !== null && (
-              <ExpenseForm
-                key={`edit-${editing}`}
-                trip={trip}
-                start={trip.expenses[editing]!}
-                editing
-                focus
-                onSubmit={update}
-                onCancel={() => setEditing(null)}
-              />
-            )
-          }
-          onEdit={setEditing}
-          onDelete={(i) => remove(removeExpense(trip, i))}
-          onDeletePayment={(i) => remove(removePayment(trip, i))}
-        />
-      </section>
+      <div className="columns">
+        <div className="main">
+          <section aria-labelledby="add-h">
+            <h2 id="add-h">Add an expense</h2>
+            <ExpenseForm
+              key={`new-${added}-${trip.people.join()}`}
+              trip={trip}
+              start={blank}
+              editing={false}
+              focus={added > 0 || trip.people.length >= 2}
+              onSubmit={add}
+              onCancel={() => {}}
+            />
+          </section>
+          <section aria-labelledby="ledger-h">
+            <h2 id="ledger-h">Expenses</h2>
+            <Entries
+              trip={trip}
+              editing={editing}
+              form={
+                editing !== null && (
+                  <ExpenseForm
+                    key={`edit-${editing}`}
+                    trip={trip}
+                    start={trip.expenses[editing]!}
+                    editing
+                    focus
+                    onSubmit={update}
+                    onCancel={() => setEditing(null)}
+                  />
+                )
+              }
+              onEdit={setEditing}
+              onDelete={(i) => remove(removeExpense(trip, i))}
+              onDeletePayment={(i) => remove(removePayment(trip, i))}
+            />
+          </section>
+        </div>
+        <aside className="side">
+          {view.report && (
+            <Settle report={view.report} onPaid={(o) => save(markPaid(trip, o, view.report!.decimals))} />
+          )}
+        </aside>
+      </div>
       {removed && (
         <div className="undo" role="status">
           <span>
-            Deleted {removed.kind === "expense" ? `"${removed.item.what || "Untitled expense"}"` : `payment from ${removed.item.from} to ${removed.item.to}`}.
+            Deleted{" "}
+            {removed.kind === "expense"
+              ? `"${removed.item.what || "Untitled expense"}"`
+              : `payment from ${removed.item.from} to ${removed.item.to}`}
+            .
           </span>
           <button onClick={undo}>Undo</button>
           <button className="quiet" onClick={() => setRemoved(null)} aria-label="Dismiss">
