@@ -1,0 +1,20 @@
+{
+  "name": "Goa, March",
+  "currency": "INR",
+  "rates": {
+    "EUR": "90.25"
+  },
+  "people": ["Asha", "Ben", "Chitra", "Dev"],
+  "expenses": [
+    { "what": "Villa, 3 nights", "paid_by": "Asha", "amount": "18,600" },
+    { "what": "Scooter hire", "paid_by": "Ben", "amount": "2,400",
+      "split": { "equal": ["Ben", "Chitra", "Dev"] } },
+    { "what": "Dinner at Gunpowder", "paid_by": "Chitra", "amount": "3,721.50" },
+    { "what": "Kayak tour", "paid_by": "Dev", "amount": "84", "currency": "EUR",
+      "split": { "shares": { "Asha": 2, "Ben": 1, "Chitra": 1, "Dev": 2 } } },
+    { "what": "Groceries", "paid_by": "Asha", "amount": "1,312",
+      "split": { "exact": { "Asha": "412", "Ben": "300", "Chitra": "300", "Dev": "300" } } },
+    { "what": "Airport taxi", "paid_by": "Ben", "amount": "1,450" }
+  ],
+  "payments": []
+}
