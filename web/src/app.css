@@ -317,10 +317,42 @@ label > span {
   gap: 40px;
 }
 
+/* On a phone the columns melt into one list, ordered so that what people
+   check most (who pays whom) comes straight after the form. */
 @media (max-width: 860px) {
   .columns {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 0;
+  }
+
+  .main,
+  .side {
+    display: contents;
+  }
+
+  section[aria-labelledby="add-h"] {
+    order: 1;
+  }
+
+  section[aria-labelledby="settle-h"] {
+    order: 2;
+  }
+
+  section[aria-labelledby="balances-h"] {
+    order: 3;
+  }
+
+  section[aria-labelledby="ledger-h"] {
+    order: 4;
+  }
+
+  section[aria-labelledby="summary-h"] {
+    order: 5;
+  }
+
+  .row label:not(.grow):not(.amount):not(.code) {
+    flex: 1 1 100px;
   }
 }
 

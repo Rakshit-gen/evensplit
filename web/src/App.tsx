@@ -58,7 +58,9 @@ export default function App() {
     );
   }
   const { trip } = view;
-  const blank = { ...blankExpense(trip, last.payer), currency: last.currency };
+  // A currency whose rate has since been removed falls back to the trip's.
+  const lastCurrency = last.currency && trip.rates?.[last.currency] ? last.currency : undefined;
+  const blank = { ...blankExpense(trip, last.payer), currency: lastCurrency };
 
   const add = async (e: Expense) => {
     if (!(await save({ ...trip, expenses: [...trip.expenses, e] }))) return false;
