@@ -14,8 +14,8 @@ pub struct Transfer {
 /// Payments that bring every net balance to zero. `nets` must sum to zero
 /// (a trip's balances always do).
 ///
-/// Each step has whoever owes most pay whoever is owed most, as much as
-/// settles one of them. Every payment clears at least one person, so there
+/// Each step has whoever owes most pay whoever is owed exactly that much,
+/// or else whoever is owed most, as much as settles one of them. Every payment clears at least one person, so there
 /// are never more than n - 1 payments; nobody both pays and receives, and no
 /// amount goes beyond what someone actually owes. Ties go to whoever comes
 /// first in the trip, so the same balances always give the same list.
@@ -23,12 +23,16 @@ pub fn settle(nets: &[i64]) -> Vec<Transfer> {
     debug_assert_eq!(nets.iter().sum::<i64>(), 0, "balances must sum to zero");
     let mut left = nets.to_vec();
     let mut out = Vec::new();
-    // ponytail: linear scan per payment, O(n^2) overall; a heap if trips
-    // ever have thousands of people.
+    // A linear scan per payment, so O(n^2) overall. Fine for any group that
+    // shares a bill; a heap would be the next step for thousands of people.
     loop {
-        let debtor = pick(&left, |v| -v);
-        let creditor = pick(&left, |v| v);
-        let (Some(d), Some(c)) = (debtor, creditor) else {
+        let Some(d) = pick(&left, |v| -v) else {
+            break;
+        };
+        // Someone owed exactly what the debtor owes clears two people with
+        // one payment, which the largest creditor might not.
+        let exact = left.iter().position(|&v| v == -left[d]);
+        let Some(c) = exact.or_else(|| pick(&left, |v| v)) else {
             break;
         };
         let amount = (-left[d]).min(left[c]);
@@ -94,6 +98,13 @@ mod tests {
         let pays = settle(&nets);
         assert_eq!(pays, vec![t(0, 3, 400), t(0, 1, 100), t(2, 1, 100)]);
         assert!(settles(&nets, &pays));
+    }
+
+    #[test]
+    fn an_exact_match_beats_the_largest_creditor() {
+        // Paying the largest creditor first would take four payments.
+        let nets = [6, -6, 7, -3, -4];
+        assert_eq!(settle(&nets), vec![t(1, 0, 6), t(4, 2, 4), t(3, 2, 3)]);
     }
 
     #[test]
