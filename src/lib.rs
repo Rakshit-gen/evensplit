@@ -2,6 +2,7 @@
 //! payments that make everyone even.
 
 pub mod money;
+pub mod settle;
 pub mod trip;
 
 pub use trip::{Balance, Expense, Payment, Split, Trip};
