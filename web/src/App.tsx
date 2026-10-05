@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { getTrip, putTrip, type Trip, type View } from "./api";
+import { getTrip, putTrip, type Expense, type Trip, type View } from "./api";
+import ExpenseForm from "./ExpenseForm";
+import { blankExpense } from "./ledger";
 import People from "./People";
 
 export default function App() {
   const [view, setView] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The last payer and currency carry over to the next expense, because
+  // receipts tend to come in runs from the same person.
+  const [last, setLast] = useState<{ payer: string | null; currency?: string }>({ payer: null });
+  const [added, setAdded] = useState(0);
 
   useEffect(() => {
     getTrip().then(setView, (e: Error) => setError(e.message));
@@ -27,6 +33,15 @@ export default function App() {
     return <main className="page">{error ? <p className="error">{error}</p> : <p className="muted">Opening the trip…</p>}</main>;
   }
   const { trip } = view;
+  const blank = { ...blankExpense(trip, last.payer), currency: last.currency };
+
+  const add = async (e: Expense) => {
+    if (!(await save({ ...trip, expenses: [...trip.expenses, e] }))) return false;
+    setLast({ payer: e.paid_by, currency: e.currency });
+    setAdded((n) => n + 1);
+    return true;
+  };
+
   return (
     <main className="page">
       <header className="top">
@@ -43,6 +58,18 @@ export default function App() {
         </p>
       )}
       <People trip={trip} save={save} />
+      <section aria-labelledby="add-h">
+        <h2 id="add-h">Add an expense</h2>
+        <ExpenseForm
+          key={`new-${added}-${trip.people.join()}`}
+          trip={trip}
+          start={blank}
+          editing={false}
+          focus={added > 0 || trip.people.length >= 2}
+          onSubmit={add}
+          onCancel={() => {}}
+        />
+      </section>
     </main>
   );
 }
