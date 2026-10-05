@@ -9,4 +9,6 @@ pub mod money;
 pub enum Error {
     #[error("\"{0}\" isn't an amount in {1}. Write it like 1240.50, with no more decimals than {1} uses.")]
     Amount(String, String),
+    #[error("\"{0}\" isn't an exchange rate. Write how much one unit is worth in the trip's currency, like 90.25.")]
+    Rate(String),
 }

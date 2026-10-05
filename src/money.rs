@@ -65,6 +65,47 @@ pub fn format(minor: i64, currency: &str) -> String {
     }
 }
 
+/// An exchange rate written as a decimal, "90.25" meaning one unit of the
+/// foreign currency is worth 90.25 of the trip's base currency. Kept as
+/// digits and a scale so converting never goes through a float.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Rate {
+    digits: i128,
+    scale: u32,
+}
+
+impl Rate {
+    pub fn parse(text: &str) -> Result<Rate, Error> {
+        let bad = || Error::Rate(text.to_string());
+        let t = text.trim();
+        let (whole, frac) = t.split_once('.').unwrap_or((t, ""));
+        if (whole.is_empty() && frac.is_empty())
+            || !whole.chars().chain(frac.chars()).all(|c| c.is_ascii_digit())
+            || whole.len() + frac.len() > 24
+        {
+            return Err(bad());
+        }
+        let digits: i128 = format!("{whole}{frac}").parse().map_err(|_| bad())?;
+        if digits == 0 {
+            return Err(bad());
+        }
+        Ok(Rate { digits, scale: frac.len() as u32 })
+    }
+
+    /// Convert `minor` units of `from` into minor units of `to`, rounding
+    /// half away from zero. This is the only place a trip rounds money
+    /// between currencies, and it happens once per expense, before any
+    /// splitting, so the split itself stays exact.
+    pub fn convert(&self, minor: i64, from: &str, to: &str) -> i64 {
+        let num = minor as i128 * self.digits * 10i128.pow(decimals(to));
+        let den = 10i128.pow(self.scale + decimals(from));
+        let q = num / den;
+        let r = num % den;
+        let out = if 2 * r.abs() >= den { q + num.signum() } else { q };
+        out as i64
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,6 +146,29 @@ mod tests {
     fn format_and_parse_round_trip() {
         for m in [0, 1, 99, 100, 101, 99999, 1234567, -42] {
             assert_eq!(parse(&format(m, "EUR"), "EUR").unwrap(), m);
+        }
+    }
+
+    #[test]
+    fn converts_between_currencies_and_rounds_half_away_from_zero() {
+        let eur = Rate::parse("90.25").unwrap();
+        assert_eq!(eur.convert(1000, "EUR", "INR"), 90250);
+        // 0.01 EUR is 0.9025 INR, which rounds to 0.90.
+        assert_eq!(eur.convert(1, "EUR", "INR"), 90);
+        // 0.02 EUR is 1.805 INR, a half, which goes up.
+        assert_eq!(eur.convert(2, "EUR", "INR"), 181);
+        assert_eq!(eur.convert(-2, "EUR", "INR"), -181);
+        let yen = Rate::parse("0.0061").unwrap();
+        assert_eq!(yen.convert(1500, "JPY", "EUR"), 915);
+        let usd = Rate::parse("0.3765").unwrap();
+        assert_eq!(usd.convert(100, "USD", "KWD"), 377);
+        assert_eq!(Rate::parse("1").unwrap().convert(12345, "EUR", "USD"), 12345);
+    }
+
+    #[test]
+    fn rejects_rates_that_are_not_positive_numbers() {
+        for bad in ["", "0", "0.000", "-1", "abc", "1,5", "."] {
+            assert!(Rate::parse(bad).is_err(), "{bad}");
         }
     }
 }
