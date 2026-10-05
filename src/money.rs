@@ -21,7 +21,11 @@ pub fn decimals(currency: &str) -> u32 {
 pub fn parse(text: &str, currency: &str) -> Result<i64, Error> {
     let bad = || Error::Amount(text.to_string(), currency.to_string());
     let places = decimals(currency);
-    let s: String = text.trim().chars().filter(|&c| c != ',' && c != ' ').collect();
+    let s: String = text
+        .trim()
+        .chars()
+        .filter(|&c| c != ',' && c != ' ')
+        .collect();
     let (neg, s) = match s.strip_prefix('-') {
         Some(rest) => (true, rest),
         None => (false, s.as_str()),
@@ -35,7 +39,11 @@ pub fn parse(text: &str, currency: &str) -> Result<i64, Error> {
     {
         return Err(bad());
     }
-    let mut minor: i64 = if whole.is_empty() { 0 } else { whole.parse().map_err(|_| bad())? };
+    let mut minor: i64 = if whole.is_empty() {
+        0
+    } else {
+        whole.parse().map_err(|_| bad())?
+    };
     for i in 0..places as usize {
         let d = frac.as_bytes().get(i).map_or(0, |b| (b - b'0') as i64);
         minor = minor * 10 + d;
@@ -80,7 +88,10 @@ impl Rate {
         let t = text.trim();
         let (whole, frac) = t.split_once('.').unwrap_or((t, ""));
         if (whole.is_empty() && frac.is_empty())
-            || !whole.chars().chain(frac.chars()).all(|c| c.is_ascii_digit())
+            || !whole
+                .chars()
+                .chain(frac.chars())
+                .all(|c| c.is_ascii_digit())
             || whole.len() + frac.len() > 24
         {
             return Err(bad());
@@ -89,7 +100,10 @@ impl Rate {
         if digits == 0 {
             return Err(bad());
         }
-        Ok(Rate { digits, scale: frac.len() as u32 })
+        Ok(Rate {
+            digits,
+            scale: frac.len() as u32,
+        })
     }
 
     /// Convert `minor` units of `from` into minor units of `to`, rounding
@@ -101,7 +115,11 @@ impl Rate {
         let den = 10i128.pow(self.scale + decimals(from));
         let q = num / den;
         let r = num % den;
-        let out = if 2 * r.abs() >= den { q + num.signum() } else { q };
+        let out = if 2 * r.abs() >= den {
+            q + num.signum()
+        } else {
+            q
+        };
         out as i64
     }
 }
@@ -193,7 +211,10 @@ mod tests {
         assert_eq!(yen.convert(1500, "JPY", "EUR"), 915);
         let usd = Rate::parse("0.3765").unwrap();
         assert_eq!(usd.convert(100, "USD", "KWD"), 377);
-        assert_eq!(Rate::parse("1").unwrap().convert(12345, "EUR", "USD"), 12345);
+        assert_eq!(
+            Rate::parse("1").unwrap().convert(12345, "EUR", "USD"),
+            12345
+        );
     }
 
     #[test]

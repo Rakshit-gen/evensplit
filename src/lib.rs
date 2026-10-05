@@ -4,15 +4,19 @@
 pub mod money;
 pub mod trip;
 
-pub use trip::{Expense, Payment, Split, Trip};
+pub use trip::{Balance, Expense, Payment, Split, Trip};
 
 /// Everything that can be wrong with a trip, worded for the person who has
 /// to fix it.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
-    #[error("\"{0}\" isn't an amount in {1}. Write it like 1240.50, with no more decimals than {1} uses.")]
+    #[error(
+        "\"{0}\" isn't an amount in {1}. Write it like 1240.50, with no more decimals than {1} uses."
+    )]
     Amount(String, String),
-    #[error("\"{0}\" isn't an exchange rate. Write how much one unit is worth in the trip's currency, like 90.25.")]
+    #[error(
+        "\"{0}\" isn't an exchange rate. Write how much one unit is worth in the trip's currency, like 90.25."
+    )]
     Rate(String),
     #[error("{0}")]
     Trip(String),

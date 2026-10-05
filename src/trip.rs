@@ -61,6 +61,20 @@ pub struct Payment {
     pub amount: String,
 }
 
+/// Where one person stands, in minor units of the trip's currency.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Balance {
+    pub name: String,
+    /// What they paid for expenses.
+    pub paid: i64,
+    /// Their part of all expenses.
+    pub share: i64,
+    /// Settle-up payments they made, minus those they received.
+    pub settled: i64,
+    /// Above zero: they are owed this much. Below: they owe it.
+    pub net: i64,
+}
+
 fn invalid(msg: String) -> Error {
     Error::Trip(msg)
 }
@@ -165,6 +179,47 @@ impl Trip {
         Ok((payer, cost, money::allocate(cost, &weights, index)))
     }
 
+    /// Everyone's balance after all expenses and payments. The nets always
+    /// add up to exactly zero.
+    pub fn balances(&self) -> Result<Vec<Balance>, Error> {
+        self.check_header()?;
+        let mut out: Vec<Balance> = self
+            .people
+            .iter()
+            .map(|p| Balance {
+                name: p.clone(),
+                paid: 0,
+                share: 0,
+                settled: 0,
+                net: 0,
+            })
+            .collect();
+        for i in 0..self.expenses.len() {
+            let (payer, cost, parts) = self.resolve(i)?;
+            out[payer].paid += cost;
+            for (b, part) in out.iter_mut().zip(parts) {
+                b.share += part;
+            }
+        }
+        for (i, p) in self.payments.iter().enumerate() {
+            let label = format!("Payment {}", i + 1);
+            let from = self.person(&p.from, &label)?;
+            let to = self.person(&p.to, &label)?;
+            let amount = money::parse(&p.amount, &self.currency)?;
+            if from == to || amount <= 0 {
+                return Err(invalid(format!(
+                    "{label} needs two different people and an amount above zero."
+                )));
+            }
+            out[from].settled += amount;
+            out[to].settled -= amount;
+        }
+        for b in &mut out {
+            b.net = b.paid - b.share + b.settled;
+        }
+        Ok(out)
+    }
+
     /// Check the parts that don't depend on any one expense.
     fn check_header(&self) -> Result<(), Error> {
         if !is_code(&self.currency) {
@@ -230,7 +285,12 @@ mod tests {
     #[test]
     fn header_problems_are_named() {
         let mut t = Trip::new("x", "inr");
-        assert!(t.check_header().unwrap_err().to_string().contains("\"inr\""));
+        assert!(
+            t.check_header()
+                .unwrap_err()
+                .to_string()
+                .contains("\"inr\"")
+        );
         t.currency = "INR".into();
         t.people = vec!["Asha".into(), "Asha".into()];
         assert!(t.check_header().unwrap_err().to_string().contains("twice"));
@@ -269,7 +329,13 @@ mod tests {
     #[test]
     fn equal_split_among_some_people() {
         let mut t = trip();
-        add(&mut t, "Chitra", "0.01", None, Split::Equal(vec!["Ben".into(), "Chitra".into()]));
+        add(
+            &mut t,
+            "Chitra",
+            "0.01",
+            None,
+            Split::Equal(vec!["Ben".into(), "Chitra".into()]),
+        );
         let (payer, cost, parts) = t.resolve(0).unwrap();
         assert_eq!((payer, cost), (2, 1));
         assert_eq!(parts.iter().sum::<i64>(), 1);
@@ -287,8 +353,17 @@ mod tests {
     #[test]
     fn exact_split_must_add_up() {
         let mut t = trip();
-        let parts = [("Asha".to_string(), "70".to_string()), ("Ben".to_string(), "30.50".to_string())];
-        add(&mut t, "Asha", "100.50", None, Split::Exact(parts.clone().into()));
+        let parts = [
+            ("Asha".to_string(), "70".to_string()),
+            ("Ben".to_string(), "30.50".to_string()),
+        ];
+        add(
+            &mut t,
+            "Asha",
+            "100.50",
+            None,
+            Split::Exact(parts.clone().into()),
+        );
         assert_eq!(t.resolve(0).unwrap().2, vec![7000, 3050, 0]);
         t.expenses[0].amount = "100".into();
         let err = t.resolve(0).unwrap_err().to_string();
@@ -303,7 +378,10 @@ mod tests {
         let (_, cost, parts) = t.resolve(0).unwrap();
         assert_eq!(cost, 300803);
         assert_eq!(parts, vec![100268, 100268, 100267]);
-        let parts = [("Asha".to_string(), "10".to_string()), ("Chitra".to_string(), "23.33".to_string())];
+        let parts = [
+            ("Asha".to_string(), "10".to_string()),
+            ("Chitra".to_string(), "23.33".to_string()),
+        ];
         t.expenses[0].split = Split::Exact(parts.into());
         let (_, cost, parts) = t.resolve(0).unwrap();
         assert_eq!(parts.iter().sum::<i64>(), cost);
@@ -314,15 +392,95 @@ mod tests {
     fn expense_problems_say_what_to_fix() {
         let mut t = trip();
         add(&mut t, "Dev", "10", None, Split::Equal(vec![]));
-        assert!(t.resolve(0).unwrap_err().to_string().contains("Dev, who isn't on the trip"));
+        assert!(
+            t.resolve(0)
+                .unwrap_err()
+                .to_string()
+                .contains("Dev, who isn't on the trip")
+        );
         t.expenses[0].paid_by = "Asha".into();
         t.expenses[0].currency = Some("USD".into());
-        assert!(t.resolve(0).unwrap_err().to_string().contains("no exchange rate for USD"));
+        assert!(
+            t.resolve(0)
+                .unwrap_err()
+                .to_string()
+                .contains("no exchange rate for USD")
+        );
         t.expenses[0].currency = None;
         t.expenses[0].amount = "0".into();
         assert!(t.resolve(0).unwrap_err().to_string().contains("above zero"));
         t.expenses[0].amount = "10".into();
         t.expenses[0].split = Split::Shares([("Ben".to_string(), 0)].into());
-        assert!(t.resolve(0).unwrap_err().to_string().contains("isn't split"));
+        assert!(
+            t.resolve(0)
+                .unwrap_err()
+                .to_string()
+                .contains("isn't split")
+        );
+    }
+
+    #[test]
+    fn balances_follow_expenses_and_payments() {
+        let mut t = trip();
+        add(&mut t, "Asha", "300", None, Split::Equal(vec![]));
+        add(
+            &mut t,
+            "Ben",
+            "60",
+            None,
+            Split::Equal(vec!["Ben".into(), "Chitra".into()]),
+        );
+        let nets: Vec<i64> = t.balances().unwrap().iter().map(|b| b.net).collect();
+        assert_eq!(nets, vec![20000, -7000, -13000]);
+        t.payments.push(Payment {
+            from: "Chitra".into(),
+            to: "Asha".into(),
+            amount: "130".into(),
+        });
+        let nets: Vec<i64> = t.balances().unwrap().iter().map(|b| b.net).collect();
+        assert_eq!(nets, vec![7000, -7000, 0]);
+        t.payments[0].to = "Chitra".into();
+        assert!(t.balances().is_err());
+    }
+
+    #[test]
+    fn balances_always_sum_to_zero() {
+        let mut x: u64 = 88172645463325252;
+        let mut next = move || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x
+        };
+        for _ in 0..500 {
+            let mut t = trip();
+            t.rates.insert("JPY".into(), "0.57".into());
+            for _ in 0..20 {
+                let payer = t.people[(next() % 3) as usize].clone();
+                let cents = 1 + next() % 1_000_000;
+                let (amount, cur) = match next() % 3 {
+                    0 => (format!("{}.{:02}", cents / 100, cents % 100), None),
+                    1 => (format!("{}.{:02}", cents / 100, cents % 100), Some("EUR")),
+                    _ => (cents.to_string(), Some("JPY")),
+                };
+                let split = match next() % 3 {
+                    0 => Split::Equal(vec![]),
+                    1 => Split::Equal(vec![t.people[(next() % 3) as usize].clone()]),
+                    _ => Split::Shares(
+                        t.people
+                            .iter()
+                            .map(|p| (p.clone(), (next() % 5) as u32 + 1))
+                            .collect(),
+                    ),
+                };
+                add(&mut t, &payer, &amount, cur, split);
+            }
+            let b = t.balances().unwrap();
+            assert_eq!(b.iter().map(|b| b.net).sum::<i64>(), 0);
+            assert_eq!(
+                b.iter().map(|b| b.paid).sum::<i64>(),
+                b.iter().map(|b| b.share).sum::<i64>()
+            );
+        }
     }
 }
