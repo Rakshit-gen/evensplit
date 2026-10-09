@@ -162,7 +162,14 @@ impl Trip {
         let cost = if cur == self.currency {
             amount
         } else {
-            self.rate(cur)?.convert(amount, cur, &self.currency)
+            self.rate(cur)?
+                .convert(amount, cur, &self.currency)
+                .ok_or_else(|| {
+                    invalid(format!(
+                        "{label} is too large to convert to {}.",
+                        self.currency
+                    ))
+                })?
         };
         let n = self.people.len();
         let mut weights = vec![0u64; n];

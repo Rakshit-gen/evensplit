@@ -110,8 +110,14 @@ impl Rate {
     /// half away from zero. This is the only place a trip rounds money
     /// between currencies, and it happens once per expense, before any
     /// splitting, so the split itself stays exact.
-    pub fn convert(&self, minor: i64, from: &str, to: &str) -> i64 {
-        let num = minor as i128 * self.digits * 10i128.pow(decimals(to));
+    ///
+    /// None when the result doesn't fit. A 24-digit rate times a 15-digit
+    /// amount is past even i128, and the old cast to i64 wrapped round to a
+    /// wrong amount without a word.
+    pub fn convert(&self, minor: i64, from: &str, to: &str) -> Option<i64> {
+        let num = (minor as i128)
+            .checked_mul(self.digits)?
+            .checked_mul(10i128.pow(decimals(to)))?;
         let den = 10i128.pow(self.scale + decimals(from));
         let q = num / den;
         let r = num % den;
@@ -120,7 +126,7 @@ impl Rate {
         } else {
             q
         };
-        out as i64
+        i64::try_from(out).ok()
     }
 }
 
@@ -192,6 +198,14 @@ mod tests {
     }
 
     #[test]
+    fn conversion_that_does_not_fit_is_none() {
+        let huge = Rate::parse("999999999999999999999999").unwrap();
+        assert_eq!(huge.convert(100_000_000_000_000_000, "EUR", "INR"), None);
+        let big = Rate::parse("1000").unwrap();
+        assert_eq!(big.convert(i64::MAX / 10, "EUR", "INR"), None);
+    }
+
+    #[test]
     fn format_and_parse_round_trip() {
         for m in [0, 1, 99, 100, 101, 99999, 1234567, -42] {
             assert_eq!(parse(&format(m, "EUR"), "EUR").unwrap(), m);
@@ -201,18 +215,21 @@ mod tests {
     #[test]
     fn converts_between_currencies_and_rounds_half_away_from_zero() {
         let eur = Rate::parse("90.25").unwrap();
-        assert_eq!(eur.convert(1000, "EUR", "INR"), 90250);
+        assert_eq!(eur.convert(1000, "EUR", "INR").unwrap(), 90250);
         // 0.01 EUR is 0.9025 INR, which rounds to 0.90.
-        assert_eq!(eur.convert(1, "EUR", "INR"), 90);
+        assert_eq!(eur.convert(1, "EUR", "INR").unwrap(), 90);
         // 0.02 EUR is 1.805 INR, a half, which goes up.
-        assert_eq!(eur.convert(2, "EUR", "INR"), 181);
-        assert_eq!(eur.convert(-2, "EUR", "INR"), -181);
+        assert_eq!(eur.convert(2, "EUR", "INR").unwrap(), 181);
+        assert_eq!(eur.convert(-2, "EUR", "INR").unwrap(), -181);
         let yen = Rate::parse("0.0061").unwrap();
-        assert_eq!(yen.convert(1500, "JPY", "EUR"), 915);
+        assert_eq!(yen.convert(1500, "JPY", "EUR").unwrap(), 915);
         let usd = Rate::parse("0.3765").unwrap();
-        assert_eq!(usd.convert(100, "USD", "KWD"), 377);
+        assert_eq!(usd.convert(100, "USD", "KWD").unwrap(), 377);
         assert_eq!(
-            Rate::parse("1").unwrap().convert(12345, "EUR", "USD"),
+            Rate::parse("1")
+                .unwrap()
+                .convert(12345, "EUR", "USD")
+                .unwrap(),
             12345
         );
     }
