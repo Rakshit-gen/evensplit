@@ -51,7 +51,8 @@ pub fn parse(text: &str, currency: &str) -> Result<i64, Error> {
     Ok(if neg { -minor } else { minor })
 }
 
-/// Format minor units as "1,240.50", grouping thousands with commas.
+/// Format minor units as "1,240.50", grouping thousands with commas, or
+/// as "1,24,050.00" for rupees.
 pub fn format(minor: i64, currency: &str) -> String {
     let places = decimals(currency);
     let scale = 10i64.pow(places);
@@ -59,7 +60,14 @@ pub fn format(minor: i64, currency: &str) -> String {
     let whole = (abs / scale as u64).to_string();
     let mut grouped = String::new();
     for (i, c) in whole.chars().enumerate() {
-        if i > 0 && (whole.len() - i).is_multiple_of(3) {
+        let after = whole.len() - i;
+        // Rupees group as lakhs and crores: 1,24,050 and 1,00,00,000.
+        let comma = if currency == "INR" {
+            after == 3 || (after > 3 && after % 2 == 1)
+        } else {
+            after.is_multiple_of(3)
+        };
+        if i > 0 && comma {
             grouped.push(',');
         }
         grouped.push(c);
@@ -195,6 +203,10 @@ mod tests {
         assert_eq!(format(100000, "JPY"), "100,000");
         assert_eq!(format(1250, "KWD"), "1.250");
         assert_eq!(format(0, "EUR"), "0.00");
+        assert_eq!(format(12405000, "INR"), "1,24,050.00");
+        assert_eq!(format(1000000000, "INR"), "1,00,00,000.00");
+        assert_eq!(format(-99999, "INR"), "-999.99");
+        assert_eq!(format(12405000, "USD"), "124,050.00");
     }
 
     #[test]
