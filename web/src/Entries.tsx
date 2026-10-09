@@ -14,7 +14,7 @@ interface Props {
 
 function shown(amount: string, currency: string): string {
   const m = parseAmount(amount, decimals(currency));
-  return m === null ? amount : formatMinor(m, decimals(currency));
+  return m === null ? amount : formatMinor(m, decimals(currency), currency);
 }
 
 function splitText(e: Expense, people: string[]): string {

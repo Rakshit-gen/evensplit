@@ -78,7 +78,7 @@ export default function ExpenseForm({ trip, start, editing, focus, onSubmit, onC
     } else {
       if (left === null) return "One of the exact amounts isn't a number.";
       if (left !== 0) {
-        const s = formatMinor(Math.abs(left), places);
+        const s = formatMinor(Math.abs(left), places, currency);
         return left > 0 ? `${s} ${currency} still to assign.` : `The parts are ${s} ${currency} over the total.`;
       }
       const out: Record<string, string> = {};
@@ -195,8 +195,8 @@ export default function ExpenseForm({ trip, start, editing, focus, onSubmit, onC
               {left === 0
                 ? "Adds up."
                 : left > 0
-                  ? `${formatMinor(left, places)} left to assign`
-                  : `${formatMinor(-left, places)} over the total`}
+                  ? `${formatMinor(left, places, currency)} left to assign`
+                  : `${formatMinor(-left, places, currency)} over the total`}
             </p>
           )}
         </div>

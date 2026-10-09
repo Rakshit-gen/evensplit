@@ -8,7 +8,7 @@ interface Props {
 
 /** Where everyone stands, and the payments that would square it. */
 export default function Settle({ report, onPaid }: Props) {
-  const m = (v: number) => formatMinor(v, report.decimals);
+  const m = (v: number) => formatMinor(v, report.decimals, report.currency);
   return (
     <>
       <section aria-labelledby="settle-h">

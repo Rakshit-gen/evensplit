@@ -120,7 +120,6 @@ Small round numbers can catch it out: with balances of +3, +2, +4, -4 and -5 it 
 - Exchange rates are set by hand and one rate covers every expense in that currency, whatever the date.
 - The trip's currency can't be changed once it has expenses, because amounts without a currency are in it.
 - Someone who is in any expense, including one shared by everyone, can't be removed, only renamed.
-- Thousands are grouped in threes (1,24,050 is shown as 124,050).
 
 ## Tests
 

@@ -26,11 +26,16 @@ export function parseAmount(text: string, places: number): number | null {
 }
 
 /** "1,240.50" from minor units. */
-export function formatMinor(minor: number, places: number): string {
+export function formatMinor(minor: number, places: number, currency = ""): string {
   const sign = minor < 0 ? "-" : "";
   const digits = String(Math.abs(minor)).padStart(places + 1, "0");
-  const whole = digits.slice(0, digits.length - places).replace(/\B(?=(\d{3})+$)/g, ",");
-  return places ? `${sign}${whole}.${digits.slice(-places)}` : `${sign}${whole}`;
+  const whole = digits.slice(0, digits.length - places);
+  // Rupees group as lakhs and crores (1,24,050), like the report does.
+  const grouped =
+    currency === "INR"
+      ? whole.replace(/\B(?=(\d{2})*\d{3}$)/g, ",")
+      : whole.replace(/\B(?=(\d{3})+$)/g, ",");
+  return places ? `${sign}${grouped}.${digits.slice(-places)}` : `${sign}${grouped}`;
 }
 
 /** Plain "1240.50" for saving: no grouping, all the places. */

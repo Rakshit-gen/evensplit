@@ -48,6 +48,10 @@ test("formats minor units with grouping", () => {
   expect(formatMinor(-123456789, 2)).toBe("-1,234,567.89");
   expect(formatMinor(100000, 0)).toBe("100,000");
   expect(formatMinor(1250, 3)).toBe("1.250");
+  expect(formatMinor(12405000, 2, "INR")).toBe("1,24,050.00");
+  expect(formatMinor(1000000000, 2, "INR")).toBe("1,00,00,000.00");
+  expect(formatMinor(99999, 2, "INR")).toBe("999.99");
+  expect(formatMinor(12405000, 2, "USD")).toBe("124,050.00");
   expect(plainAmount(124050, 2)).toBe("1240.50");
 });
 
