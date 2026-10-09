@@ -81,6 +81,14 @@ fn invalid(msg: String) -> Error {
     Error::Trip(msg)
 }
 
+/// Amounts are checked to 15 digits each, but enough of them still add up
+/// past what an i64 holds.
+fn too_large(what: &str) -> Error {
+    invalid(format!(
+        "{what} takes the totals past what evensplit can add up. Check the amounts."
+    ))
+}
+
 impl Trip {
     pub fn new(name: &str, currency: &str) -> Trip {
         Trip {
@@ -186,7 +194,7 @@ impl Trip {
                 }
             }
             Split::Exact(parts) => {
-                let mut sum = 0;
+                let mut sum: i64 = 0;
                 for (name, text) in parts {
                     let part = money::parse(text, cur)?;
                     if part < 0 {
@@ -195,7 +203,7 @@ impl Trip {
                         )));
                     }
                     weights[self.person(name, &label)?] = part as u64;
-                    sum += part;
+                    sum = sum.checked_add(part).ok_or_else(|| too_large(&label))?;
                 }
                 if sum != amount {
                     return Err(invalid(format!(
@@ -234,9 +242,13 @@ impl Trip {
             .collect();
         for i in 0..self.expenses.len() {
             let (payer, cost, parts) = self.resolve(i)?;
-            out[payer].paid += cost;
+            let label = format!("Expense {}", i + 1);
+            out[payer].paid = out[payer]
+                .paid
+                .checked_add(cost)
+                .ok_or_else(|| too_large(&label))?;
             for (b, part) in out.iter_mut().zip(parts) {
-                b.share += part;
+                b.share = b.share.checked_add(part).ok_or_else(|| too_large(&label))?;
             }
         }
         for (i, p) in self.payments.iter().enumerate() {
@@ -249,11 +261,19 @@ impl Trip {
                     "{label} needs two different people and an amount above zero."
                 )));
             }
-            out[from].settled += amount;
-            out[to].settled -= amount;
+            out[from].settled = out[from]
+                .settled
+                .checked_add(amount)
+                .ok_or_else(|| too_large(&label))?;
+            out[to].settled = out[to]
+                .settled
+                .checked_sub(amount)
+                .ok_or_else(|| too_large(&label))?;
         }
         for b in &mut out {
-            b.net = b.paid - b.share + b.settled;
+            b.net = (b.paid - b.share)
+                .checked_add(b.settled)
+                .ok_or_else(|| too_large(&b.name))?;
         }
         Ok(out)
     }
@@ -539,5 +559,18 @@ mod tests {
         assert_eq!(names, vec!["trip.json"]);
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(text.contains("\n  \"people\": [\n"), "{text}");
+    }
+
+    #[test]
+    fn totals_too_large_to_add_are_an_error() {
+        let mut t = trip();
+        for _ in 0..100 {
+            add(&mut t, "Asha", "999999999999999", None, Split::default());
+        }
+        let err = t.balances().unwrap_err();
+        assert!(
+            err.to_string().contains("past what evensplit can add up"),
+            "{err}"
+        );
     }
 }
